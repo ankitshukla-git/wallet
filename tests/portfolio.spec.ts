@@ -29,9 +29,7 @@ test.describe('Portfolio', () => {
     await page.locator('input[name="password"]').fill(password);
     await page.locator('form button[type="submit"]').click();
 
-    // --- 2FA (TOTP) — skipped automatically if session is still valid ---
-    if (!totpSecret) throw new Error('TEST_TOTP_SECRET is required in .env.');
-
+    // --- 2FA (TOTP) — skipped if session valid or account has no 2FA ---
     const codeInput = page.locator('input[name="tfa"]');
     const needsTwoFa = await Promise.race([
       codeInput.waitFor({ state: 'visible', timeout: 15_000 }).then(() => true),
@@ -39,6 +37,7 @@ test.describe('Portfolio', () => {
     ]);
 
     if (needsTwoFa) {
+      if (!totpSecret) throw new Error('2FA required. Set TEST_TOTP_SECRET in .env.');
       const token = speakeasy.totp({ secret: totpSecret, encoding: 'base32' });
       await codeInput.fill(token);
 
